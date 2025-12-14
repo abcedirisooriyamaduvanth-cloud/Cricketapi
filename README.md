@@ -21,7 +21,7 @@ Add these secrets to your GitHub repository (Settings → Secrets and variables 
 
 ### 2. Add Stream URLs
 
-Edit `scraper.py` and modify the `STREAM_URLS` list:
+Edit `scraper_playwright.py` and modify the `STREAM_URLS` list:
 
 ```python
 STREAM_URLS = [
@@ -44,17 +44,21 @@ The workflow runs automatically every 40 minutes. You can also trigger it manual
 
 ## Local Testing
 
+### Quick Firebase Test (No Browser Required)
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Set environment variables
-export FIREBASE_URL="https://cricket-stream-portal-default-rtdb.firebaseio.com"
-export FIREBASE_AUTH="your_auth_token"
+# Create .env file
+cp .env.example .env
+# Edit .env and add your Firebase URL
 
-# Run scraper
-python scraper.py
+# Test Firebase connection
+python quick_test.py
 ```
+
+### Full Scraper Test (Requires Browser)
+The full scraper requires a browser environment. Test it on GitHub Actions instead (see TESTING.md).
 
 ## Firebase Data Structure
 
@@ -83,11 +87,12 @@ Data is saved to Firebase with the following structure:
 
 ## How It Works
 
-1. Uses Selenium with headless Chrome to navigate streaming sites
-2. Captures network traffic using Chrome DevTools Protocol
-3. Extracts m3u8 URLs and associated headers from network logs
-4. Saves data to Firebase RTDB with timestamp
-5. Runs every 40 minutes via GitHub Actions cron schedule
+1. Uses Playwright with headless Chromium to navigate streaming sites
+2. Captures network requests to detect m3u8 URLs
+3. Extracts m3u8 URLs and associated headers (Origin, Referer, User-Agent)
+4. Handles iframes and redirections automatically
+5. Saves data to Firebase RTDB with timestamp
+6. Runs every 40 minutes via GitHub Actions cron schedule
 
 ## Troubleshooting
 
