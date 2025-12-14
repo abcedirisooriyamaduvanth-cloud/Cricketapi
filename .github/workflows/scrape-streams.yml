@@ -61,7 +61,8 @@ jobs:
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
           FIREBASE_AUTH: ${{ secrets.FIREBASE_AUTH }}
         run: |
-          python scraper_playwright.py
+          # Try CDP method first (better network capture)
+          python scraper_cdp.py || python scraper_playwright.py
       
       - name: Upload results
         uses: actions/upload-artifact@v4

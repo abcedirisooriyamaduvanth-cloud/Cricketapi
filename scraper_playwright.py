@@ -47,12 +47,15 @@ def scrape_stream(stream_config, playwright):
     """Scrape a single stream URL for m3u8 links"""
     print(f"\nScraping: {stream_config['url']}")
     
-    # Store captured m3u8 requests
+    # Store captured m3u8 requests and all requests for debugging
     m3u8_requests = []
+    all_requests = []
     
     def handle_request(request):
-        """Capture m3u8 requests"""
+        """Capture all requests, especially m3u8"""
         url = request.url
+        all_requests.append(url)
+        
         if '.m3u8' in url.lower():
             headers = request.headers
             m3u8_requests.append({
@@ -64,7 +67,25 @@ def scrape_stream(stream_config, playwright):
                 },
                 'timestamp': time.time()
             })
-            print(f"   Found m3u8: {url[:80]}...")
+            print(f"   ✅ Found m3u8: {url[:80]}...")
+    
+    def handle_response(response):
+        """Also check responses for m3u8"""
+        url = response.url
+        if '.m3u8' in url.lower() and url not in [r['link'] for r in m3u8_requests]:
+            # Get request headers from the response's request
+            request = response.request
+            headers = request.headers
+            m3u8_requests.append({
+                'link': url,
+                'headers': {
+                    'Origin': headers.get('origin', ''),
+                    'Referer': headers.get('referer', ''),
+                    'User-Agent': headers.get('user-agent', '')
+                },
+                'timestamp': time.time()
+            })
+            print(f"   ✅ Found m3u8 (response): {url[:80]}...")
     
     try:
         # Launch browser
@@ -84,51 +105,72 @@ def scrape_stream(stream_config, playwright):
         
         page = context.new_page()
         
-        # Listen to network requests
+        # Listen to network requests and responses
         page.on('request', handle_request)
+        page.on('response', handle_response)
         
         # Navigate to page
         print("   Loading page...")
-        page.goto(stream_config['url'], wait_until='domcontentloaded', timeout=30000)
+        page.goto(stream_config['url'], wait_until='networkidle', timeout=60000)
         
         # Wait for initial load
-        time.sleep(5)
+        time.sleep(3)
         
         # Check for iframes
         print("   Checking for iframes...")
         iframes = page.frames
         print(f"   Found {len(iframes)} frame(s)")
         
-        # Try to click play button in any frame
+        # Try to interact with the page to trigger stream loading
         print("   Looking for play button...")
+        clicked = False
         for frame in iframes:
             try:
                 # Try multiple selectors
                 selectors = [
+                    'video',
                     'button.play',
                     '.play-button',
                     '[class*="play"]',
                     'button[aria-label*="play" i]',
                     '.vjs-big-play-button',
-                    'video'
+                    'button',
+                    '.player'
                 ]
                 
                 for selector in selectors:
                     try:
-                        element = frame.query_selector(selector)
-                        if element and element.is_visible():
-                            element.click()
-                            print(f"   Clicked: {selector}")
-                            time.sleep(2)
-                            break
+                        elements = frame.query_selector_all(selector)
+                        for element in elements:
+                            if element.is_visible():
+                                element.click(timeout=1000)
+                                print(f"   Clicked: {selector}")
+                                clicked = True
+                                time.sleep(3)
+                                break
                     except:
                         continue
+                    if clicked:
+                        break
             except:
                 continue
+            if clicked:
+                break
+        
+        if not clicked:
+            print("   No play button found, waiting for auto-play...")
         
         # Wait for stream to load
         print("   Waiting for stream to load...")
-        time.sleep(25)  # Increased wait time for better reliability
+        time.sleep(30)  # Increased wait time
+        
+        # Debug: Show some request info
+        print(f"   Total requests captured: {len(all_requests)}")
+        video_requests = [r for r in all_requests if any(ext in r.lower() for ext in ['.m3u8', '.ts', '.mp4', 'video', 'stream'])]
+        if video_requests:
+            print(f"   Video-related requests: {len(video_requests)}")
+            for vr in video_requests[:3]:  # Show first 3
+                print(f"     - {vr[:100]}")
         
         # Close browser
         browser.close()
@@ -214,6 +256,17 @@ def main():
         print("\nSuccessful streams:")
         for r in results:
             print(f"  - {r['name']}: {r['link'][:60]}...")
+    else:
+        print("\n⚠️  No m3u8 links found.")
+        print("\nPossible reasons:")
+        print("  1. Site structure changed - check if URL still works")
+        print("  2. Stream not active - try during live match")
+        print("  3. Need longer wait time - increase sleep duration")
+        print("  4. Site uses different streaming method")
+        print("\nTroubleshooting:")
+        print("  - Visit the URL manually to verify it works")
+        print("  - Check browser console for m3u8 requests")
+        print("  - Try increasing wait time in scraper_playwright.py")
 
 if __name__ == '__main__':
     main()
