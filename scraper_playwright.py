@@ -128,7 +128,7 @@ def scrape_stream(stream_config, playwright):
         
         # Wait for stream to load
         print("   Waiting for stream to load...")
-        time.sleep(20)
+        time.sleep(25)  # Increased wait time for better reliability
         
         # Close browser
         browser.close()

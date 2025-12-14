@@ -128,6 +128,14 @@ The scraper already prints detailed logs. Check workflow logs for:
 2. Firebase database allows writes
 3. Check workflow logs for error messages
 
+### Playwright Installation Fails
+
+**Error**: `Package 'libasound2' has no installation candidate`
+
+**Solution**: Already fixed in workflow - uses `libasound2t64` for Ubuntu 24.04
+
+If you see this error, ensure you're using the latest workflow file.
+
 ### Rate Limiting
 
 If scraping multiple URLs, add delays:
