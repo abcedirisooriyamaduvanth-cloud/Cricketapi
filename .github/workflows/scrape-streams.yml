@@ -61,8 +61,8 @@ jobs:
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
           FIREBASE_AUTH: ${{ secrets.FIREBASE_AUTH }}
         run: |
-          # Use aggressive scraper with longer waits and better detection
-          python scraper_aggressive.py
+          # Use ultimate scraper that captures ALL network traffic
+          python scraper_ultimate.py
       
       - name: Upload results
         uses: actions/upload-artifact@v4
